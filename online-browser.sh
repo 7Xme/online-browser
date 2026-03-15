@@ -20,12 +20,14 @@ BPurple='\e[1;35m'      # Purple
 BCyan='\e[1;36m'        # Cyan
 BWhite='\e[1;37m'       # White
 
+# Reset
+Reset='\e[0m'
 
 #######################################################
 
+clear
+trap 'echo -e "\n${Red}[!] Installation interrupted by user${Reset}"; exit 1' SIGINT SIGQUIT SIGTSTP
 
-echo -ne '\033c'
-trap RM_HT_FOLDER SIGINT SIGQUIT SIGTSTP
 echo ""
 sleep 0.1
 echo -e "${Cyan}    +${Yellow}--------------------------------------------------------------------------------------------------------------------------${Cyan}+"
@@ -44,209 +46,200 @@ echo -e "     |${BGreen}    ╚██████╔╝██║ ╚████
 sleep 0.1
 echo -e "     |${Green}     ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝╚═╝  ╚═══╝╚══════╝    ${Black}╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝ ╚══════╝╚══════╝╚═╝  ╚═╝ ${Yellow}    |"
 sleep 0.1
-echo -e "     |                                                                                                               ${BCyan} BETA${Yellow}    |"
+echo -e "     |                                                                                                               ${BCyan} LINUX${Yellow}    |"
 sleep 0.1
 echo -e "     |                                                                                                                        |"
 sleep 0.1
 echo -e "${Cyan}    +${Yellow}--------------------------------------------------------------------------------------------------------------------------${Cyan}+${Yellow}"
 sleep 0.1
-echo -e "                                     |${BRed} Online Browser + Auto OBS ${BYellow}by${BGreen} Hamza Hammouch${Cyan} powerd by${BPurple} linuxserver${Yellow} |"
+echo -e "                                     |${BRed} Linux Apps Container ${BYellow}by${BGreen} Hamza Hammouch${Cyan} powerd by${BPurple} Docker${Yellow} |"
 sleep 0.1
 echo -e "                                     ${Cyan}+${Yellow}--------------------------------------------------------${Cyan}+"
 sleep 0.1
 
 #######################################################
 
+echo -e "${Yellow}     +${White}-------------------------------------------------------------------${Yellow}+"
+echo -e "${White}     | ${Yellow} ID ${White} |                   ${BPurple}   Application Name                       ${White}   |"
+echo -e "${Yellow}     +${White}-------------------------------------------------------------------${Yellow}+"
+echo -e "${White}     | ${Red}[${Yellow}01${Red}]${White} |$Green Install OBS Studio (with VNC)${White}                              |"
+echo -e "${White}     | ${Red}[${Yellow}02${Red}]${White} |$Green Install Firefox (Browser)${White}                                  |"
+echo -e "${White}     | ${Red}[${Yellow}03${Red}]${White} |$Green Install Both (OBS + Firefox)${White}                             |"
+echo -e "${White}     | ${Red}[${Yellow}04${Red}]${White} |$Green Stop & Remove All Containers${White}                             |"
+echo -e "${Yellow}     +${White}-------------------------------------------------------------------${Yellow}+"
+echo ""
+echo -e -n "$White    ${Red} [${Cyan}!Note:${Red}]$White If your choice is OBS type $Green 1$White not ${Red}01$White and the same principle applies to other options "
+echo ""
+echo ""
 
-echo -e "${Yellow}     +${White}-------------------------------------------------------------------${Yellow}+"
-echo -e "${White}     | ${Yellow} ID ${White} |                   ${BPurple}   Browser Name                       ${White}   |"
-echo -e "${Yellow}     +${White}-------------------------------------------------------------------${Yellow}+"
-echo -e "${White}     | ${Red}[${Yellow}01${Red}]${White} |$Green Install Chromium + Auto OBS${White}                                |"
-echo -e "${White}     | ${Red}[${Yellow}02${Red}]${White} |$Green Install Firefox + Auto OBS${White}                                 |"
-echo -e "${White}     | ${Red}[${Yellow}03${Red}]${White} |$Green Install Opera + Auto OBS${White}                                   |"
-echo -e "${White}     | ${Red}[${Yellow}04${Red}]${White} |$Green Install Mullvad Browser + Auto OBS${White}                       |"
-echo -e "${Yellow}     +${White}-------------------------------------------------------------------${Yellow}+"
-echo ""
-echo -e -n "$White    ${Red} [${Cyan}!Note:${Red}]$White If your choice is Chromium type $Green 1${White} not ${Red}01$White and the same principle applies to other browsers "
-echo ""
-echo ""
-echo -e -n "$White    ${Red} [${Cyan}!${Red}]$White Type the$BRed ID$White "
-read -p "of your choice : " choice
-
-# Function to install OBS with auto-start in container
-install_obs_autostart() {
-    local container_name=$1
-    echo -e "${Yellow}Installing OBS Studio with auto-start...${White}"
-    sleep 2
+# Check if Docker is installed
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        echo -e "\n${Red}[!] Docker is not installed!${Reset}"
+        echo -e "${Yellow}[*] Installing Docker...${Reset}"
+        
+        # Install Docker
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+        sudo usermod -aG docker $USER
+        
+        echo -e "${Green}[✔] Docker installed successfully!${Reset}"
+        echo -e "${Yellow}[!] Please log out and log back in for changes to take effect, or run: newgrp docker${Reset}"
+        
+        # Try to use docker without logout
+        newgrp docker << EOF
+EOF
+    else
+        echo -e "\n${Green}[✔] Docker is already installed${Reset}"
+    fi
     
-    # Wait for container to be ready
-    echo -e "${Yellow}Waiting for container to start...${White}"
-    sleep 5
-    
-    # Install OBS, create desktop shortcut, and configure auto-start
-    docker exec $container_name bash -c "
-        echo '=== Updating package list ===' && \
-        apt-get update -qq && \
-        echo '=== Installing OBS Studio ===' && \
-        apt-get install -y -qq software-properties-common && \
-        add-apt-repository -y ppa:obsproject/obs-studio && \
-        apt-get update -qq && \
-        apt-get install -y -qq obs-studio ffmpeg xterm && \
-        
-        echo '=== Creating OBS desktop shortcut ===' && \
-        mkdir -p /usr/share/applications && \
-        cat > /usr/share/applications/obs.desktop << 'EOF'
-[Desktop Entry]
-Name=OBS Studio
-Exec=obs
-Icon=obs
-Type=Application
-Categories=AudioVideo;Recorder;
-Terminal=false
-EOF
-        
-        echo '=== Creating auto-start script ===' && \
-        mkdir -p /config/.config/autostart && \
-        cat > /config/.config/autostart/obs.desktop << 'EOF'
-[Desktop Entry]
-Type=Application
-Name=OBS Studio
-Exec=/usr/bin/obs
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-EOF
-        
-        echo '=== Creating startup wrapper ===' && \
-        cat > /config/start-obs.sh << 'EOF'
-#!/bin/bash
-sleep 5
-/usr/bin/obs &
-EOF
-        chmod +x /config/start-obs.sh
-        
-        echo '=== Adding to .bashrc for terminal start ===' && \
-        echo 'export DISPLAY=:1' >> /config/.bashrc && \
-        echo 'if [ -z \"\$OBS_STARTED\" ]; then export OBS_STARTED=1; sleep 3 && /usr/bin/obs & fi' >> /config/.bashrc
-        
-        echo '=== OBS Auto-Start Configuration Complete ==='
-    "
-    
-    # Create custom startup script in container
-    docker exec $container_name bash -c "
-        echo '=== Modifying container startup ===' && \
-        cat > /etc/services.d/obs/run << 'EOF'
-#!/usr/bin/with-contenv bash
-echo 'Starting OBS Studio...'
-sleep 10
-export DISPLAY=:1
-exec s6-setuidgid abc /usr/bin/obs
-EOF
-        chmod +x /etc/services.d/obs/run 2>/dev/null || true
-        
-        # Alternative: modify init script
-        mkdir -p /defaults
-        cat > /defaults/autostart << 'EOF'
-#!/bin/bash
-/usr/bin/obs &
-EOF
-        chmod +x /defaults/autostart
-    "
-    
-    echo -e "${Green}✔ OBS Studio installed with AUTO-START!${White}"
-    echo -e "${Cyan}OBS will start automatically when you open the browser window${White}"
+    # Start Docker service if not running
+    if ! sudo systemctl is-active --quiet docker; then
+        sudo systemctl start docker
+        echo -e "${Green}[✔] Docker service started${Reset}"
+    fi
 }
+
+# Function to get external IP
+get_external_ip() {
+    EXTERNAL_IP=$(curl -s ifconfig.me || curl -s icanhazip.com || echo "localhost")
+    echo "$EXTERNAL_IP"
+}
+
+# Install OBS Studio
+install_obs() {
+    echo -e "\n${Yellow}[*] Installing OBS Studio...${Reset}"
+    
+    # Stop existing container if exists
+    sudo docker stop obs-studio 2>/dev/null
+    sudo docker rm obs-studio 2>/dev/null
+    
+    # Run OBS Studio with noVNC (web-based VNC)
+    sudo docker run -d \
+        --name=obs-studio \
+        --security-opt seccomp=unconfined \
+        -e PUID=1000 \
+        -e PGID=1000 \
+        -e TZ=Etc/UTC \
+        -e SUBFOLDER=/ \
+        -e "TITLE=OBS Studio" \
+        -p 3000:3000 \
+        -p 3001:3001 \
+        -v /opt/obs/config:/config \
+        --shm-size="2gb" \
+        --restart unless-stopped \
+        ghcr.io/linuxserver/obs-studio:latest || \
+        sudo docker run -d \
+            --name=obs-studio \
+            -p 5900:5900 \
+            -p 6080:6080 \
+            -v /opt/obs/config:/root/.config/obs-studio \
+            --restart unless-stopped \
+            josh5/obs-studio:latest
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${Green}[✔] OBS Studio container started successfully!${Reset}"
+        IP=$(get_external_ip)
+        echo -e "\n${Cyan}╔════════════════════════════════════════════════════════╗${Reset}"
+        echo -e "${Cyan}║${Reset}  ${BGreen}OBS Studio is now running!${Reset}                            ${Cyan}║${Reset}"
+        echo -e "${Cyan}║${Reset}  ${White}Access URL: ${BYellow}http://${IP}:3000${Reset}                        ${Cyan}║${Reset}"
+        echo -e "${Cyan}║${Reset}  ${White}Or: ${BYellow}http://${IP}:6080${Reset} (if using alternative)          ${Cyan}║${Reset}"
+        echo -e "${Cyan}╚════════════════════════════════════════════════════════╝${Reset}"
+    else
+        echo -e "${Red}[✘] Failed to start OBS Studio container${Reset}"
+        return 1
+    fi
+}
+
+# Install Firefox
+install_firefox() {
+    echo -e "\n${Yellow}[*] Installing Firefox...${Reset}"
+    
+    # Stop existing container if exists
+    sudo docker stop firefox 2>/dev/null
+    sudo docker rm firefox 2>/dev/null
+    
+    # Run Firefox
+    sudo docker run -d \
+        --name=firefox \
+        --security-opt seccomp=unconfined \
+        -e PUID=1000 \
+        -e PGID=1000 \
+        -e TZ=Etc/UTC \
+        -p 4000:3000 \
+        -p 4001:3001 \
+        -v /opt/firefox/config:/config \
+        --shm-size="2gb" \
+        --restart unless-stopped \
+        ghcr.io/linuxserver/firefox:latest
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${Green}[✔] Firefox container started successfully!${Reset}"
+        IP=$(get_external_ip)
+        echo -e "\n${Cyan}╔════════════════════════════════════════════════════════╗${Reset}"
+        echo -e "${Cyan}║${Reset}  ${BGreen}Firefox is now running!${Reset}                               ${Cyan}║${Reset}"
+        echo -e "${Cyan}║${Reset}  ${White}Access URL: ${BYellow}http://${IP}:4000${Reset}                        ${Cyan}║${Reset}"
+        echo -e "${Cyan}╚════════════════════════════════════════════════════════╝${Reset}"
+    else
+        echo -e "${Red}[✘] Failed to start Firefox container${Reset}"
+        return 1
+    fi
+}
+
+# Install both
+install_both() {
+    install_obs
+    install_firefox
+    
+    IP=$(get_external_ip)
+    echo -e "\n${BGreen}╔════════════════════════════════════════════════════════╗${Reset}"
+    echo -e "${BGreen}║${Reset}  ${BWhite}Both applications are running!${Reset}                        ${BGreen}║${Reset}"
+    echo -e "${BGreen}║${Reset}  ${White}OBS Studio: ${BYellow}http://${IP}:3000${Reset}                          ${BGreen}║${Reset}"
+    echo -e "${BGreen}║${Reset}  ${White}Firefox:    ${BYellow}http://${IP}:4000${Reset}                          ${BGreen}║${Reset}"
+    echo -e "${BGreen}╚════════════════════════════════════════════════════════╝${Reset}"
+}
+
+# Cleanup function
+cleanup() {
+    echo -e "\n${Yellow}[*] Stopping and removing all containers...${Reset}"
+    sudo docker stop obs-studio firefox 2>/dev/null
+    sudo docker rm obs-studio firefox 2>/dev/null
+    echo -e "${Green}[✔] All containers removed${Reset}"
+}
+
+# Main execution
+check_docker
+
+echo -e -n "$White    ${Red} [${Cyan}!${Red}]$White Type the$BRed ID$White of your choice : "
+read choice
 
 case $choice in
     1)
-        echo "Installing Chromium with Auto OBS..."
-        docker run -d \
-            --name=chromium \
-            --security-opt seccomp=unconfined \
-            -e PUID=1000 \
-            -e PGID=1000 \
-            -e TZ=Etc/UTC \
-            -p 3000:3000 \
-            -p 3001:3001 \
-            -v /chromium:/config \
-            --shm-size="7gb" \
-            --restart unless-stopped \
-            ghcr.io/linuxserver/chromium:latest
-        install_obs_autostart "chromium"
+        install_obs
         ;;
     2)
-        echo "Installing Firefox with Auto OBS..."
-        docker run -d \
-            --name=firefox \
-            --security-opt seccomp=unconfined \
-            -e PUID=1000 \
-            -e PGID=1000 \
-            -e TZ=Etc/UTC \
-            -p 3000:3000 \
-            -p 3001:3001 \
-            -v /firefox:/config \
-            --shm-size="7gb" \
-            --restart unless-stopped \
-            ghcr.io/linuxserver/firefox:latest
-        install_obs_autostart "firefox"
+        install_firefox
         ;;
     3)
-        echo "Installing Opera with Auto OBS..."
-        docker run -d \
-            --name=opera \
-            --security-opt seccomp=unconfined \
-            -e PUID=1000 \
-            -e PGID=1000 \
-            -e TZ=Etc/UTC \
-            -p 3000:3000 \
-            -p 3001:3001 \
-            -v /opera:/config \
-            --shm-size="7gb" \
-            --restart unless-stopped \
-            ghcr.io/linuxserver/opera:latest
-        install_obs_autostart "opera"
+        install_both
         ;;
     4)
-        echo "Installing Mullvad Browser with Auto OBS..."
-        docker run -d \
-            --name=mullvad-browser \
-            --security-opt seccomp=unconfined \
-            -e PUID=1000 \
-            -e PGID=1000 \
-            -e TZ=Etc/UTC \
-            -p 3000:3000 \
-            -p 3001:3001 \
-            -v /mullvad-browser:/config \
-            --shm-size="7gb" \
-            --restart unless-stopped \
-            ghcr.io/linuxserver/mullvad-browser:latest
-        install_obs_autostart "mullvad-browser"
+        cleanup
         ;;
     *)
-        echo "Invalid choice. Please enter 1, 2, 3, or 4."
+        echo -e "\n${Red}[✘] Invalid choice. Please enter 1, 2, 3, or 4.${Reset}"
         exit 1
         ;;
 esac
 
 #######################################################
 
-clear
 echo ""
 sleep 0.1
-echo -e -n "$White    ${Red} [${Green} ✔ ${Red}]$White Browser + Auto OBS installation completed successfully ( •̀ ω •́ )✧"
+echo -e -n "$White    ${Red} [${Green} ✔ ${Red}]$White Installation completed successfully ( •̀ ω •́ )✧"
 sleep 0.1
 echo ""
 sleep 0.1
-echo -e "${Green}    ============================================${White}"
-echo -e "${Green}    Access your browser at: http://localhost:3000${White}"
-echo -e "${Green}    OBS Studio will start AUTOMATICALLY!${White}"
-echo -e "${Green}    ============================================${White}"
-echo ""
-echo -e "${Yellow}    Instructions:${White}"
-echo -e "${White}    1. Open browser to ${Cyan}http://localhost:3000${White}"
-echo -e "${White}    2. Wait 10-15 seconds for desktop to load${White}"
-echo -e "${White}    3. OBS will start automatically${White}"
-echo -e "${White}    4. If OBS doesn't appear, click the menu and find OBS Studio${White}"
 echo ""
 sleep 0.1
 echo -e "    ${Red} ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀${Blue}⢀⣠⣴⣾⣿⣿⣿⣶⣄⡀⠀"
@@ -274,3 +267,10 @@ sleep 0.1
 echo -e "    ${White}"
 sleep 0.1
 echo ""
+
+# Show running containers status
+echo -e "${Cyan}[*] Checking running containers...${Reset}"
+sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo -e "${Yellow}No containers running${Reset}"
+
+echo -e "\n${Green}[✔] Done! You can access your applications through the browser.${Reset}"
+echo -e "${Yellow}[!] Note: If running on Google Cloud Shell, use Web Preview on the specified ports${Reset}"
